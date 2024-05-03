@@ -1,10 +1,50 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-
-export const prerender = false;
+import { GET, PUT } from "../api/github";
 
 const { slug } = Astro.params;
+
+let result = "";
+try {
+	if (!slug) throw new Error();
+
+	let file = await GET(slug);
+	result = atob(file.data.content);
+
+	if (Astro.request.method === "POST") {
+		const data = await Astro.request.formData();
+		const content = data.get("content");
+
+		if (!content) throw new Error();
+
+		if (content !== result) {
+			await PUT(slug, {
+				content: content ? String(content) : "",
+				sha: file.data.sha
+			});
+			result = String(content);
+		}
+
+	}
+} catch (error) {
+	result = "Start writing!";
+	if (error instanceof Error) {
+		console.error("Error!", error.message);
+	}
+}
+
 ---
 <Layout title={`${slug}.txt`}>
-	<h1>Text content</h1>
+	<form method="POST">
+		<textarea style="color: black;" name="content">{result}</textarea>
+		<button id="submit" type="submit">submit</button>
+	</form>
 </Layout>
+<script>
+	window.addEventListener("keydown", (e) => {
+		if (e.ctrlKey && e.key === 's') {
+			e.preventDefault();
+			document.getElementById('submit')?.click();
+		}
+	});
+</script>
