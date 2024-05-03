@@ -1,0 +1,10 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+---
+<Layout title={`${slug}.txt`}>
+	<h1>Text content</h1>
+</Layout>
