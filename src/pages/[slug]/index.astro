@@ -29,8 +29,6 @@ if (slug) {
 					sha: file?.data.sha
 				});
 
-				console.log('zap', res)
-
 				result = String(content);
 			}
 		} catch (error) {
@@ -49,47 +47,79 @@ if (slug) {
 	>
 		<div
 			class="
-				grid grid-rows-[36px_1fr]
-				dark:bg-[#0d1117] relative w-full rounded-2xl overflow-hidden
-				before:border-[#d0d7de] dark:before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
+				grid grid-rows-[36px_1fr] pb-4
+				bg-[#0d1117] relative w-full rounded-2xl overflow-hidden
+				before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
 				after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
 			"
 		>
 			<div 
 				id="header" 
 				class="
-				dark:bg-[rgba(186,207,247,.02)] bg-[#f6f8fa]
-					border-b dark:border-[rgba(186,207,247,.08)] border-[rgba(186,207,247,.25)] w-full flex justify-center items-center
-					dark:bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
-					bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.25)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.25)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.25)_50%,transparent_51%)]
+				bg-[rgba(186,207,247,.02)]
+					border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center
+					bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
 				"
 			>
-				<span class="dark:text-[#848d97] select-none">{slug}.txt</span>
+				<span class="text-[#848d97] select-none">{slug}.txt</span>
 			</div>
-				<form method="POST" class="flex flex-col gap-4 p-4">
-					<textarea 
-						name="content"
-						placeholder="_" 
+				<form id="form" method="POST">
+					<div 
+						id="editorRoot" 
+						data-message={result}
 						class="
-							relative resize-none transition-all rounded-md px-4 py-2 outline-none h-[65vh]
-							placeholder:opacity-0 placeholder:!animate-pulse
-							dark:bg-[#161b22] bg-[#f6f8fa]
-							border border-[rgba(186,215,247,.12)] focus:border-[rgba(186,215,247,.17)]
-							font-mono text-[13px]
-						" 
-					>{result}</textarea>
-					<button id="submit" type="submit" class="text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
-						Commit changes...
-					</button>
+							h-[65vh] flex
+							[&>.cm-editor]:w-0 [&>.cm-editor]:flex-grow
+							[&_.cm-content]:py-0 [&_.cm-gutters]:bg-transparent [&_.cm-gutters]:border-transparent
+							[&_.cm-activeLine]:bg-transparent
+							[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold
+							[&_.cm-cursor]:border-white
+							[&_.cm-selectionBackground]:!bg-white/10
+						"
+					></div>
+					<textarea id="textarea" name="content" hidden></textarea>
 				</form>
+				<button id="submit" class="mx-4 text-white ml-auto mt-4 transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
+					Commit changes...
+				</button>
 		</div>
 	</div>
 </Layout>
 <script>
+	import { basicSetup } from "codemirror"
+	import { EditorView, keymap } from "@codemirror/view"
+	import { insertTab, indentLess } from "@codemirror/commands"
+
+	const editorRoot = document.getElementById('editorRoot');
+
+	const editor = editorRoot 
+		? new EditorView({
+			doc: editorRoot.dataset.message,
+			extensions: [
+				basicSetup,
+				keymap.of([
+					{ key: 'Tab', preventDefault: true, run: insertTab },
+					{ key: 'Shift-Tab', preventDefault: true, run: indentLess }
+				]),
+			],
+			parent: editorRoot
+		}) 
+		: undefined
+
 	window.addEventListener("keydown", (e) => {
 		if (e.ctrlKey && e.key === 's') {
 			e.preventDefault();
 			document.getElementById('submit')?.click();
 		}
 	});
+
+	function submitForm () {
+		const form = (document.getElementById('form') as HTMLFormElement);
+		const textarea = (document.getElementById('textarea') as HTMLTextAreaElement);
+
+		textarea.value = editor.state.doc.toString();
+		form.submit();
+	}
+
+	document.getElementById("submit")?.addEventListener("click", submitForm);
 </script>
