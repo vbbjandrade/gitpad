@@ -117,7 +117,7 @@ if (slug) {
 		const form = (document.getElementById('form') as HTMLFormElement);
 		const textarea = (document.getElementById('textarea') as HTMLTextAreaElement);
 
-		textarea.value = editor.state.doc.toString();
+		textarea.value = editor?.state.doc.toString() || "";
 		form.submit();
 	}
 
