@@ -1,100 +1,194 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { GET, PUT } from "../api/github";
+import { GET, PUT, GET_HISTORY } from "../api/github";
 
 const { slug } = Astro.params;
+const shaQueryParam = Astro.url.searchParams.get('sha');
 
-let result = "";
+let content = "";
+let sha = "";
 let file = undefined;
+let history: { sha: string; commit: { committer: { name: string; date: string | number | Date; }; }; }[] = [];
+let inspectedFile = undefined;
 
-if (slug) {
+async function getInspectedFile () {
+	if (!shaQueryParam || !slug) return;
 	try {
-		file = await GET(slug);
-		console.log("zap", file)
-		result = atob(file.data.content)
+		const res = await GET(slug, shaQueryParam);
+		inspectedFile = atob(res.data.content);
 	} catch (error) {
 		if (error instanceof Error) {
 			console.error("Error!", error.message);
 		}
 	}
+}
 
-	if (Astro.request.method === "POST") {
-		try {
-			const data = await Astro.request.formData();
-			const content = data.get("content");
-		
-			if (content !== result) {
-				const res = await PUT(slug, {
-					content: content ? String(content) : "",
-					sha: file?.data.sha
-				});
-
-				result = String(content);
-			}
-		} catch (error) {
-			if (error instanceof Error) {
-				console.error("Error!", error.message);
-			}
+async function getHistory () {
+	if (!slug) return;
+	try {
+		const historyRes = await GET_HISTORY(slug);
+		history = historyRes.data;
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error("Error!", error.message);
 		}
 	}
-
 }
+
+async function getFile () {
+	if (!slug) return;
+	try {
+		file = await GET(slug);
+		content = atob(file.data.content);
+		sha = file.data.sha;
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error("Error!", error.message);
+		}
+	}
+}
+
+async function postFile () {
+	if (!slug) return;
+	try {
+		const formData = await Astro.request.formData();
+		const formContent = formData.get("content");
+		const formSha = formData.get("sha");
+	
+		const res = await PUT(slug, {
+			content: formContent ? String(formContent) : "",
+			sha: formSha ? String(formSha) : undefined
+		});
+
+		content = String(formContent);
+		sha = res.data.content.sha;
+
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error("Error!", error.message);
+		}
+	}
+}
+
+if (Astro.request.method === "POST") {
+	await postFile();
+}
+
+await Promise.all([
+	Astro.request.method !== "POST" && getFile(),
+	getInspectedFile(),
+	getHistory()
+])
 
 ---
 <Layout title={`${slug}.txt`}>
-	<div 
-		class="relative h-screen w-full max-w-[1076px] mx-auto sm:p-4 flex"
+	<dialog 
+		open={!!inspectedFile}
+		class="z-20 absolute inset-0 w-full h-full bg-[#161b2266]" 
 	>
-		<div
-			class="
-				grid grid-rows-[36px_1fr] sm:m-auto sm:h-[75vh]
-				bg-[#0d1117] relative w-full sm:rounded-2xl overflow-hidden
-				before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
-				after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
-			"
-		>
-			<div 
-				id="header" 
+		<div class="flex justify-center items-center w-full h-full p-4">
+			<form 
+				method="dialog" 
 				class="
-				bg-[rgba(186,207,247,.02)]
-					border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center overflow-hidden px-16
-					bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
+					relative p-4 bg-[#0d1117] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409] rounded-xl border border-[#30363d]
+					max-w-4xl w-full flex flex-col gap-4
 				"
 			>
-				<span class="text-[#848d97] select-none max-w-full overflow-hidden whitespace-nowrap overflow-ellipsis">{slug}.txt</span>
-			</div>
-			<div class="flex flex-col gap-4">
-				<form id="form" method="POST" class="flex-grow h-0">
-					<div 
-						id="editorRoot" 
-						data-message={result}
-						class="
-							h-full flex
-							[&>.cm-editor]:w-0 [&>.cm-editor]:flex-grow
-							[&_.cm-content]:py-0 [&_.cm-gutters]:bg-transparent [&_.cm-gutters]:border-transparent
-							[&_.cm-activeLine]:bg-transparent
-							[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold
-							[&_.cm-cursor]:border-white
-							[&_.cm-selectionBackground]:!bg-white/20
-							[&_.cm-editor.cm-focused]:outline-none
-							border-b border-[rgba(186,214,247,0.06)]
-
-						"
-					></div>
-					<textarea id="textarea" name="content" hidden></textarea>
-				</form>
-				<button id="submit" class="mx-4 mb-4 text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
-					Commit changes...
-				</button>
-			</div>
-			</div>
+				<div class="relative flex items-start">
+					<div class="flex flex-col flex-grow ">
+						<h6 class="text-sm text-[#848D97]"><b class="text-white">GitPad User</b> commited</h6>
+						<small class="text-xs text-[#848D97]">More data coming soon</small>
+					</div>
+					<button aria-label="Dismiss" type="submit" class="outline-none focus:ring rounded-md">  
+						<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="fill-[#848D97]">
+							<path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
+						</svg>
+					</button>
+				</div>
+				<textarea disabled class="resize-none font-mono text-[13px] p-2 h-[60vh] bg-[#161b22] rounded-md">{inspectedFile}</textarea>
+			</form>
+		</div>
+	</dialog>
+	<div class="flex gap-6 justify-center">
+		<div class="relative h-screen w-full max-w-[1076px] flex">
+			<div
+				class="
+					grid grid-rows-[36px_1fr] sm:m-auto sm:h-[75vh]
+					bg-[#0d1117] relative w-full sm:rounded-2xl overflow-hidden
+					before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
+					after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
+				"
+			>
+				<div 
+					id="header" 
+					class="
+					bg-[rgba(186,207,247,.02)] relative
+						border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center overflow-hidden px-16
+						bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
+						[&:has(input:checked)+div_aside]:translate-x-0 [&:has(input:not(:checked))+div_aside]:delay-150
+						[&:has(input:checked)+div_aside>div:nth-child(1)]:opacity-100 [&:has(input:checked)+div_aside>div:nth-child(1)]:delay-100
+					"
+				>
+					<span class="text-[#848d97] select-none max-w-full overflow-hidden whitespace-nowrap overflow-ellipsis">{slug}.txt</span>
+					<input class="sm:hidden absolute right-4" type="checkbox" >
+				</div>
+				<div class="flex flex-col">
+					<form id="gitpadForm" action={`/${slug}`} method="POST" class="flex flex-col flex-grow h-0">
+						<div class="flex flex-grow h-0 border-b border-[#30363D]">
+							<div 
+								id="editorRoot" 
+								data-message={content}
+								class="
+									h-full flex flex-grow
+									[&>.cm-editor]:w-0 [&>.cm-editor]:flex-grow
+									[&_.cm-content]:py-0 [&_.cm-gutters]:bg-[#0d1117] [&_.cm-gutters]:border-transparent
+									[&_.cm-activeLine]:bg-transparent
+									[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold
+									[&_.cm-cursor]:border-white
+									[&_.cm-selectionBackground]:!bg-white/20
+									[&_.cm-editor.cm-focused]:outline-none
+								"
+							></div>
+							<textarea id="contentInput" name="content" hidden></textarea>
+							<input value={sha} name="sha" hidden>
+							<aside class="w-full sm:w-auto h-full flex justify-end absolute sm:relative right-0 translate-x-full sm:translate-x-0 transition-all z-10">
+								<div class="bg-black/50 flex-grow h-full opacity-0 transition-opacity"></div>
+								{history.length > 0 && (
+									<div class="bg-[#0d1117] border-[#30363D] border-l p-4 h-full max-w-80 overflow-auto">
+										<h4 class="font-bold text-sm mb-4">Latest changes</h4>
+										<ul class="list-none">
+											{history.map((h: { sha: string, commit: { committer: { name: string, date: string | number | Date; }; }; }) => (
+												<li class="relative ml-1 flex pb-4 items-start before:w-[1px] before:top-0 before:bottom-0 before:left-0 before:absolute before:content-[''] before:bg-[#30363db3]">
+													<div class="flex flex-shrink-0 justify-center w-8 h-4 mr-2 -ml-[15.5px] mb-2 -mt-1">
+														<svg class="fill-[#30363d] mb-2" aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true"><path d="M8 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path></svg>
+													</div>
+													<div class="flex flex-col -mt-1">
+														<small class="text-[#848d97] text-xs leading-normal">{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(h.commit.committer.date))}</small>
+														<a class="text-sm line-clamp-2 hover:text-[#4493F8] hover:underline" href={`/${slug}?sha=${h.sha}`}>{h.commit.committer.name}</a>
+													</div>
+												</li>
+											))}
+										</ul>
+										<div class="ml-1 pt-2 pl-4 border-l border-[#30363db3]">
+											<a class="text-xs mt-2 text-[#848D97] hover:text-[#4493F8]">View more changes (SOON) ↓</a>
+										</div>
+									</div>
+								)}
+							</aside>
+						</div>
+						<button id="submitBtn" type="button"class="mx-4 my-4 text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
+							Commit changes...
+						</button>
+					</form>
+				</div>
+				</div>
 		</div>
 	</div>
 </Layout>
 <script>
-	import { basicSetup } from "codemirror"
-	import { EditorView, keymap } from "@codemirror/view"
-	import { insertTab, indentLess } from "@codemirror/commands"
+	import { basicSetup } from "codemirror";
+	import { EditorView, keymap } from "@codemirror/view";
+	import { insertTab, indentLess } from "@codemirror/commands";
 
 	const editorRoot = document.getElementById('editorRoot');
 
@@ -113,19 +207,19 @@ if (slug) {
 		: undefined
 
 	window.addEventListener("keydown", (e) => {
-		if (e.ctrlKey && e.key === 's') {
+		if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
 			e.preventDefault();
-			document.getElementById('submit')?.click();
+			document.getElementById('submitBtn')?.click();
 		}
 	});
 
 	function submitForm () {
-		const form = (document.getElementById('form') as HTMLFormElement);
-		const textarea = (document.getElementById('textarea') as HTMLTextAreaElement);
+		const gitpadForm = (document.getElementById('gitpadForm') as HTMLFormElement);
+		const contentInput = (document.getElementById('contentInput') as HTMLTextAreaElement);
 
-		textarea.value = editor?.state.doc.toString() || "";
-		form.submit();
+		contentInput.value = editor?.state.doc.toString() || "";
+		gitpadForm.submit();
 	}
 
-	document.getElementById("submit")?.addEventListener("click", submitForm);
+	document.getElementById("submitBtn")?.addEventListener("click", submitForm);
 </script>
