@@ -5,40 +5,85 @@ import { GET, PUT } from "../api/github";
 const { slug } = Astro.params;
 
 let result = "";
-try {
-	if (!slug) throw new Error();
+let file = undefined;
 
-	let file = await GET(slug);
-	result = atob(file.data.content);
+if (slug) {
+	try {
+		file = await GET(slug);
+		console.log("zap", file)
+		result = atob(file.data.content)
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error("Error!", error.message);
+		}
+	}
 
 	if (Astro.request.method === "POST") {
-		const data = await Astro.request.formData();
-		const content = data.get("content");
+		try {
+			const data = await Astro.request.formData();
+			const content = data.get("content");
+		
+			if (content !== result) {
+				const res = await PUT(slug, {
+					content: content ? String(content) : "",
+					sha: file?.data.sha
+				});
 
-		if (!content) throw new Error();
+				console.log('zap', res)
 
-		if (content !== result) {
-			await PUT(slug, {
-				content: content ? String(content) : "",
-				sha: file.data.sha
-			});
-			result = String(content);
+				result = String(content);
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				console.error("Error!", error.message);
+			}
 		}
+	}
 
-	}
-} catch (error) {
-	result = "Start writing!";
-	if (error instanceof Error) {
-		console.error("Error!", error.message);
-	}
 }
 
 ---
 <Layout title={`${slug}.txt`}>
-	<form method="POST">
-		<textarea style="color: black;" name="content">{result}</textarea>
-		<button id="submit" type="submit">submit</button>
-	</form>
+	<div 
+		class="relative h-screen w-full max-w-[1076px] mx-auto p-4 flex items-center"
+	>
+		<div
+			class="
+				grid grid-rows-[36px_1fr]
+				dark:bg-[#0d1117] relative w-full rounded-2xl overflow-hidden
+				before:border-[#d0d7de] dark:before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
+				after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
+			"
+		>
+			<div 
+				id="header" 
+				class="
+				dark:bg-[rgba(186,207,247,.02)] bg-[#f6f8fa]
+					border-b dark:border-[rgba(186,207,247,.08)] border-[rgba(186,207,247,.25)] w-full flex justify-center items-center
+					dark:bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
+					bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.25)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.25)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.25)_50%,transparent_51%)]
+				"
+			>
+				<span class="dark:text-[#848d97] select-none">{slug}.txt</span>
+			</div>
+				<form method="POST" class="flex flex-col gap-4 p-4">
+					<textarea 
+						name="content"
+						placeholder="_" 
+						class="
+							relative resize-none transition-all rounded-md px-4 py-2 outline-none h-[65vh]
+							placeholder:opacity-0 placeholder:!animate-pulse
+							dark:bg-[#161b22] bg-[#f6f8fa]
+							border border-[rgba(186,215,247,.12)] focus:border-[rgba(186,215,247,.17)]
+							font-mono text-[13px]
+						" 
+					>{result}</textarea>
+					<button id="submit" type="submit" class="text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
+						Commit changes...
+					</button>
+				</form>
+		</div>
+	</div>
 </Layout>
 <script>
 	window.addEventListener("keydown", (e) => {
