@@ -43,12 +43,12 @@ if (slug) {
 ---
 <Layout title={`${slug}.txt`}>
 	<div 
-		class="relative h-screen w-full max-w-[1076px] mx-auto p-4 flex items-center"
+		class="relative h-screen w-full max-w-[1076px] mx-auto sm:p-4 flex"
 	>
 		<div
 			class="
-				grid grid-rows-[36px_1fr] pb-4
-				bg-[#0d1117] relative w-full rounded-2xl overflow-hidden
+				grid grid-rows-[36px_1fr] sm:m-auto sm:h-[75vh]
+				bg-[#0d1117] relative w-full sm:rounded-2xl overflow-hidden
 				before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
 				after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
 			"
@@ -57,31 +57,37 @@ if (slug) {
 				id="header" 
 				class="
 				bg-[rgba(186,207,247,.02)]
-					border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center
+					border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center overflow-hidden px-16
 					bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
 				"
 			>
-				<span class="text-[#848d97] select-none">{slug}.txt</span>
+				<span class="text-[#848d97] select-none max-w-full overflow-hidden whitespace-nowrap overflow-ellipsis">{slug}.txt</span>
 			</div>
-				<form id="form" method="POST">
+			<div class="flex flex-col gap-4">
+				<form id="form" method="POST" class="flex-grow h-0">
 					<div 
 						id="editorRoot" 
 						data-message={result}
 						class="
-							h-[65vh] flex
+							h-full flex
 							[&>.cm-editor]:w-0 [&>.cm-editor]:flex-grow
 							[&_.cm-content]:py-0 [&_.cm-gutters]:bg-transparent [&_.cm-gutters]:border-transparent
 							[&_.cm-activeLine]:bg-transparent
 							[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold
 							[&_.cm-cursor]:border-white
-							[&_.cm-selectionBackground]:!bg-white/10
+							[&_.cm-selectionBackground]:!bg-white/20
+							[&_.cm-editor.cm-focused]:outline-none
+							border-b border-[rgba(186,214,247,0.06)]
+
 						"
 					></div>
 					<textarea id="textarea" name="content" hidden></textarea>
 				</form>
-				<button id="submit" class="mx-4 text-white ml-auto mt-4 transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
+				<button id="submit" class="mx-4 mb-4 text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
 					Commit changes...
 				</button>
+			</div>
+			</div>
 		</div>
 	</div>
 </Layout>
