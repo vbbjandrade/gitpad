@@ -113,24 +113,42 @@ await Promise.all([
 		<div class="relative h-screen w-full max-w-[1076px] flex">
 			<div
 				class="
-					grid grid-rows-[36px_1fr] sm:m-auto sm:h-[75vh]
-					bg-[#0d1117] relative w-full sm:rounded-2xl overflow-hidden
-					before:border-[rgba(186,214,247,0.06)] before:absolute before:rounded-[inherit] before:pointer-events-none before:content-[''] before:inset-0 before:border
-					after:absolute after:rounded-[inherit] after:pointer-events-none after:inset-0 after:content-[''] after:shadow-[inset_0_1px_1px_0_rgba(199,211,234,.12),inset_0_24px_48px_0_rgba(199,211,234,.05)]
+					grid grid-rows-[48px_1fr] sm:m-auto sm:h-[75vh] border border-[#30363d] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409]
+					bg-[#0d1117] relative w-full sm:rounded-md overflow-hidden
 				"
 			>
 				<div 
 					id="header" 
 					class="
-					bg-[rgba(186,207,247,.02)] relative
-						border-b border-[rgba(186,207,247,.08)] w-full flex justify-center items-center overflow-hidden px-16
-						bg-[radial-gradient(8px_circle_at_16px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_32px_50%,rgba(186,207,247,.12)_50%,transparent_51%),radial-gradient(8px_circle_at_48px_50%,rgba(186,207,247,.12)_50%,transparent_51%)]
+					bg-[#161b22] relative
+						border-b border-[#30363d] w-full flex items-center overflow-hidden p-3 pl-5
 						[&:has(input:checked)+div_aside]:translate-x-0 [&:has(input:not(:checked))+div_aside]:delay-150
 						[&:has(input:checked)+div_aside>div:nth-child(1)]:opacity-100 [&:has(input:checked)+div_aside>div:nth-child(1)]:delay-100
 					"
 				>
-					<span class="text-[#848d97] select-none max-w-full overflow-hidden whitespace-nowrap overflow-ellipsis">{slug}.txt</span>
-					<input class="sm:hidden absolute right-4" type="checkbox" >
+				<div class="flex items-center flex-nowrap max-w-full flex-grow">
+					<h1 class="text-[#848d97] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">gitpad-pages <span class="font-normal">/</span> <span class="text-white">{slug}.txt</span></h1>
+					<button id="copyBtn" aria-label="Copy" class="relative flex p-[6px] ml-2 outline-none focus:ring rounded-md hover:bg-[#b1bac41f] [&:active>svg:nth-child(1)]:opacity-0 [&:active>svg:nth-child(2)]:opacity-100 [&:focus>svg:nth-child(1)]:opacity-0 [&:focus>svg:nth-child(2)]:opacity-100">
+						<svg class="transition-opacity" aria-hidden="true" focusable="false" role="img" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; user-select: none; vertical-align: text-bottom; overflow: visible;">
+							<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>
+							<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+						</svg>
+						<svg class="absolute opacity-0 transition-opacity" aria-hidden="true" focusable="false" role="img" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; user-select: none; vertical-align: text-bottom; overflow: visible;">
+							<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+						</svg>
+					</button>
+					<label for="toggleSidebar" class="sm:hidden ml-auto pl-2 self-end relative [&:has(input:checked)_svg:nth-child(1)]:opacity-0 [&:has(input:checked)_svg:nth-child(2)]:opacity-100 cursor-pointer">
+						<div class="relative border border-[#30363d] flex p-[6px] outline-none focus:ring rounded-md hover:bg-[#b1bac41f] [&:has(+input:focus)]:ring">
+							<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" fill="currentColor">
+								<path d="M1 2.75A.75.75 0 0 1 1.75 2h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 2.75Zm0 5A.75.75 0 0 1 1.75 7h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 7.75ZM1.75 12h12.5a.75.75 0 0 1 0 1.5H1.75a.75.75 0 0 1 0-1.5Z"></path>
+							</svg>
+							<svg class="absolute opacity-0 transition-opacity" aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" fill="currentColor">
+								<path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
+							</svg>
+						</div>
+						<input id="toggleSidebar" type="checkbox" aria-label="Open Menu" class="absolute outline-none top-0 right-0 w-0 h-0 opacity-0 overflow-hidden">
+					</label>
+				</div>
 				</div>
 				<div class="flex flex-col">
 					<form id="gitpadForm" action={`/${slug}`} method="POST" class="flex flex-col flex-grow h-0">
@@ -155,7 +173,7 @@ await Promise.all([
 								<div class="bg-black/50 flex-grow h-full opacity-0 transition-opacity"></div>
 								{history.length > 0 && (
 									<div class="bg-[#0d1117] border-[#30363D] border-l p-4 h-full max-w-80 overflow-auto">
-										<h4 class="font-bold text-sm mb-4">Latest changes</h4>
+										<h4 class="font-semibold text-sm mb-4">Latest changes</h4>
 										<ul class="list-none">
 											{history.map((h: { sha: string, commit: { committer: { name: string, date: string | number | Date; }; }; }) => (
 												<li class="relative ml-1 flex pb-4 items-start before:w-[1px] before:top-0 before:bottom-0 before:left-0 before:absolute before:content-[''] before:bg-[#30363db3]">
@@ -222,4 +240,5 @@ await Promise.all([
 	}
 
 	document.getElementById("submitBtn")?.addEventListener("click", submitForm);
+	document.getElementById("copyBtn")?.addEventListener("click", () => window.navigator.clipboard.writeText(window.location.href));
 </script>
