@@ -1,7 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { decode } from 'js-base64';
-import { GET, PUT, GET_HISTORY } from "../api/github";
+import { GET, PUT, GET_HISTORY, GET_COMMIT, GET_RATE } from "../api/github";
 
 const { slug } = Astro.params;
 const shaQueryParam = Astro.url.searchParams.get('sha');
@@ -11,16 +11,37 @@ let sha = "";
 let file = undefined;
 let history: { sha: string; commit: { committer: { name: string; date: string | number | Date; }; }; }[] = [];
 let inspectedFile = undefined;
+let committer = undefined;
+let rateLimited = false;
+
+function handleError (error: any) {
+	if (error instanceof Error) {
+		console.error("Error!", error.message);
+	}
+	// .headers['x-ratelimit-remaining']
+	// 	console.error('Too many requests in the last hour! Try again later!');
+}
+
+async function getRateLimit () {
+	const rateRes = await GET_RATE();
+	rateLimited = rateRes.data.rate.remaining < 25;
+}
 
 async function getInspectedFile () {
 	if (!shaQueryParam || !slug) return;
+
 	try {
-		const res = await GET(slug, shaQueryParam);
-		inspectedFile = decode(res.data.content);
+		const [fileRes, commitRes] = await Promise.all([
+			GET(slug, shaQueryParam),
+			GET_COMMIT(shaQueryParam)
+		])
+
+		inspectedFile = {
+			content: decode(fileRes.data.content),
+			committer: commitRes.data.commit.committer,
+		};
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error("Error!", error.message);
-		}
+		handleError(error);
 	}
 }
 
@@ -30,9 +51,7 @@ async function getHistory () {
 		const historyRes = await GET_HISTORY(slug);
 		history = historyRes.data;
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error("Error!", error.message);
-		}
+		handleError(error);
 	}
 }
 
@@ -43,9 +62,7 @@ async function getFile () {
 		content = decode(file.data.content);
 		sha = file.data.sha;
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error("Error!", error.message);
-		}
+		handleError(error);
 	}
 }
 
@@ -55,66 +72,105 @@ async function postFile () {
 		const formData = await Astro.request.formData();
 		const formContent = formData.get("content");
 		const formSha = formData.get("sha");
+		const formCommitter = formData.get("committer");
 	
 		const res = await PUT(slug, {
 			content: formContent ? String(formContent) : "",
-			sha: formSha ? String(formSha) : undefined
+			sha: formSha ? String(formSha) : undefined,
+			committer: formCommitter ? String(formCommitter) : undefined
 		});
 
 		content = String(formContent);
 		sha = res.data.content.sha;
+		committer = String(formCommitter);
 
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error("Error!", error.message);
-		}
+		handleError(error);
 	}
 }
 
-if (Astro.request.method === "POST") {
-	await postFile();
+await getRateLimit()
+
+if (!rateLimited) {
+	if (Astro.request.method === "POST") {
+		await postFile();
+	}
+	
+	await Promise.all([
+		Astro.request.method !== "POST" && getFile(),
+		getInspectedFile(),
+		getHistory()
+	])
 }
 
-await Promise.all([
-	Astro.request.method !== "POST" && getFile(),
-	getInspectedFile(),
-	getHistory()
-])
 
 ---
 <Layout title={`${slug}.txt`}>
-	<dialog 
-		open={!!inspectedFile}
+	<dialog
+		open={rateLimited}
 		class="z-20 absolute inset-0 w-full h-full bg-[#161b2266]" 
+		tabindex="1"
 	>
 		<div class="flex justify-center items-center w-full h-full p-4">
-			<form 
-				method="dialog" 
-				class="
-					relative p-4 bg-[#0d1117] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409] rounded-xl border border-[#30363d]
-					max-w-4xl w-full flex flex-col gap-4
-				"
-			>
-				<div class="relative flex items-start">
-					<div class="flex flex-col flex-grow ">
-						<h6 class="text-sm text-[#848D97]"><b class="text-white">GitPad User</b> commited</h6>
-						<small class="text-xs text-[#848D97]">More data coming soon</small>
+			<div class="relative bg-[#0d1117] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409]  rounded-xl border border-[#30363d] max-w-lg w-full flex flex-col">
+					<div class="px-4 py-[14px] rounded-t-xl border-b border-[#30363d]">
+						<h4 class="font-semibold">GitPad is currently rate-limited</h4>
+						<small class="mt-1 text-xs text-[#848d97]">Too many requests in the last hour</small>
 					</div>
-					<button aria-label="Dismiss" type="submit" class="outline-none focus:ring rounded-md">  
-						<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="fill-[#848D97]">
-							<path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
-						</svg>
-					</button>
-				</div>
-				<textarea disabled class="resize-none font-mono text-[13px] p-2 h-[60vh] bg-[#161b22] rounded-md">{inspectedFile}</textarea>
-			</form>
+					<div class="px-4 py-2 flex gap-2 items-center bg-[#161b22] rounded-b-xl">
+						<svg class="fill-[#f85149]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path></svg>
+						<p class="text-[13px] -mt-[3px]">Try again later.</p>
+					</div>
+			</div>
 		</div>
 	</dialog>
+
+	{inspectedFile && (
+		<dialog 
+			open={!!inspectedFile}
+			class="z-20 absolute inset-0 w-full h-full bg-[#161b2266]" 
+		>
+			<div class="flex justify-center items-center w-full h-full p-4">
+				<form 
+					id="inspectedFileForm"
+					method="dialog" 
+					class="
+						relative p-4 bg-[#0d1117] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409] rounded-xl border border-[#30363d]
+						max-w-4xl w-full flex flex-col gap-4
+					"
+				>
+					<div class="relative flex items-start gap-2">
+						<div class="flex flex-col flex-grow ">
+							<h6 class="text-sm text-[#848D97]"><b class="text-white">{inspectedFile.committer.name}</b> commited</h6>
+							<small class="text-xs text-[#848D97]">@ {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(inspectedFile.committer.date))}</small>
+						</div>
+						<button aria-label="Dismiss" type="submit" class="outline-none focus:ring rounded-md">  
+							<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="fill-[#848D97]">
+								<path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
+							</svg>
+						</button>
+					</div>
+					<div class="relative w-full">
+						<button type="button" id="copyInspectedBtn" aria-label="Copy" class="shadow-lg bg-[#0d1117]/90 absolute bottom-3 left-2 flex p-[6px] outline-none focus:ring rounded-md hover:bg-[#b1bac4]/25 [&:active>svg:nth-child(1)]:opacity-0 [&:active>svg:nth-child(2)]:opacity-100 [&:focus>svg:nth-child(1)]:opacity-0 [&:focus>svg:nth-child(2)]:opacity-100">
+							<svg class="transition-opacity" aria-hidden="true" focusable="false" role="img" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; user-select: none; vertical-align: text-bottom; overflow: visible;">
+								<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>
+								<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+							</svg>
+							<svg class="absolute opacity-0 transition-opacity" aria-hidden="true" focusable="false" role="img" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; user-select: none; vertical-align: text-bottom; overflow: visible;">
+								<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+							</svg>
+						</button>
+						<textarea id="inspectedFile" disabled class="resize-none font-mono text-[13px] p-2 h-[60vh] bg-[#161b22] w-full rounded-md">{inspectedFile.content}</textarea>
+					</div>
+				</form>
+			</div>
+		</dialog>
+	)}
 	<div class="flex gap-6 justify-center">
 		<div class="relative h-screen w-full max-w-[1076px] flex">
 			<div
 				class="
-					grid grid-rows-[48px_1fr] sm:m-auto sm:h-[75vh] border border-[#30363d] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409]
+					grid grid-rows-[48px_1fr] sm:mx-4 sm:m-auto sm:h-[75vh] sm:max-h-[600px] border border-[#30363d] shadow-[0_0_0_1px_#30363d,0_24px_48px_0_#010409]
 					bg-[#0d1117] relative w-full sm:rounded-md overflow-hidden
 				"
 			>
@@ -195,9 +251,12 @@ await Promise.all([
 								)}
 							</aside>
 						</div>
-						<button id="submitBtn" type="button"class="mx-4 my-4 text-white ml-auto transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
-							Commit changes...
-						</button>
+						<div class="flex gap-4 justify-end items-center flex-wrap p-4">
+							<input value={committer} name="committer" placeholder="Your name (optional)" class="text-sm transition-all outline-2 focus:bg-[#0d1117] placeholder:text-[#484f58] py-[5px] px-[12px] bg-[#161b22] outline-none focus:outline-[#1f6feb] outline-offset-[-1px] rounded-md border focus:border-[#1f6feb] border-[#30363d]">
+							<button id="submitBtn" type="button" class="text-white transition-all focus:ring outline-none h-8 px-3 rounded-md border border-[#f0f6fc1a] text-sm font-medium bg-[#1f6feb]">
+								Commit changes...
+							</button>
+						</div>
 					</form>
 				</div>
 				</div>
@@ -242,4 +301,5 @@ await Promise.all([
 
 	document.getElementById("submitBtn")?.addEventListener("click", submitForm);
 	document.getElementById("copyBtn")?.addEventListener("click", () => window.navigator.clipboard.writeText(window.location.href));
+	document.getElementById("copyInspectedBtn")?.addEventListener("click", () => window.navigator.clipboard.writeText((document.getElementById('inspectedFile') as HTMLTextAreaElement).value));
 </script>

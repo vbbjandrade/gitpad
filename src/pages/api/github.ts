@@ -9,14 +9,14 @@ export const GET = async (file: string, sha?: string) => {
 	});
 }
 
-export const PUT = async (file: string, { content, sha }: { content: string, sha?: string }) => {
+export const PUT = async (file: string, { content, sha, committer }: { content: string, sha?: string, committer?: string }) => {
 	return await request(`PUT /repos/vbbjandrade/gitpad-pages/contents/${file}.txt`, {
 		headers: {
 			accept: 'application/vnd.github+json',
 			authorization: `token ${import.meta.env.GITHUB_TOKEN}`,
 		},
 		committer: {
-			name: 'GitPad User',
+			name: committer || 'GitPad User',
 			email: 'user@gitpad.com',
 			date: new Date().toISOString()
 		},
@@ -26,8 +26,24 @@ export const PUT = async (file: string, { content, sha }: { content: string, sha
 	});
 }
 
+export const GET_COMMIT = async (sha: string) => {
+	return await request(`GET /repos/vbbjandrade/gitpad-pages/commits/${sha}`, {
+		headers: {
+			authorization: `token ${import.meta.env.GITHUB_TOKEN}`
+		}
+	});
+}
+
 export const GET_HISTORY = async (file: string, page?: number) => {
-	return await request(`GET /repos/vbbjandrade/gitpad-pages/commits?path=${file}.txt&per_page=5&page=${page || 1}`, {
+	return await request(`GET /repos/vbbjandrade/gitpad-pages/commits?path=${file}.txt&per_page=100&page=${page || 1}`, {
+		headers: {
+			authorization: `token ${import.meta.env.GITHUB_TOKEN}`
+		}
+	});
+}
+
+export const GET_RATE = async () => {
+	return await request(`GET /rate_limit`, {
 		headers: {
 			authorization: `token ${import.meta.env.GITHUB_TOKEN}`
 		}

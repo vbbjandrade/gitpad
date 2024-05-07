@@ -10,17 +10,20 @@ const { title } = Astro.props;
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="description" content="Astro description" />
+		<meta name="description" content="Share text online with commit history." />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" href="/commit.svg" type="image/svg+xml" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 	</head>
-	<body class="bg-[#010409] text-[#e6edf3]">
+	<body class="bg-[#010409]">
 		<slot />
 	</body>
 </html>
 <style is:global>
+	* {
+		color: #e6edf3;
+	}
 	:root {
 		color-scheme: dark;
 	}
