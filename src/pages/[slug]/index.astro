@@ -10,7 +10,7 @@ let content = "";
 let sha = "";
 let file = undefined;
 let history: { sha: string; commit: { committer: { name: string; date: string | number | Date; }; }; }[] = [];
-let inspectedFile = undefined;
+let inspectedFile: any = undefined;
 let committer = undefined;
 let rateLimited = false;
 
