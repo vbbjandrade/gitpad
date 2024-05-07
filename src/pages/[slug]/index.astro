@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { decode } from 'js-base64';
 import { GET, PUT, GET_HISTORY } from "../api/github";
 
 const { slug } = Astro.params;
@@ -15,7 +16,7 @@ async function getInspectedFile () {
 	if (!shaQueryParam || !slug) return;
 	try {
 		const res = await GET(slug, shaQueryParam);
-		inspectedFile = atob(res.data.content);
+		inspectedFile = decode(res.data.content);
 	} catch (error) {
 		if (error instanceof Error) {
 			console.error("Error!", error.message);
@@ -39,7 +40,7 @@ async function getFile () {
 	if (!slug) return;
 	try {
 		file = await GET(slug);
-		content = atob(file.data.content);
+		content = decode(file.data.content);
 		sha = file.data.sha;
 	} catch (error) {
 		if (error instanceof Error) {

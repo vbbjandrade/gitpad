@@ -1,4 +1,5 @@
 import { request } from "@octokit/request";
+import { encode } from 'js-base64';
 
 export const GET = async (file: string, sha?: string) => {
 	return await request(`GET /repos/vbbjandrade/gitpad-pages/contents/${file}.txt${sha ? `?ref=${sha}` : ''}`, {
@@ -12,7 +13,7 @@ export const PUT = async (file: string, { content, sha }: { content: string, sha
 	return await request(`PUT /repos/vbbjandrade/gitpad-pages/contents/${file}.txt`, {
 		headers: {
 			accept: 'application/vnd.github+json',
-			authorization: `token ${import.meta.env.GITHUB_TOKEN}`
+			authorization: `token ${import.meta.env.GITHUB_TOKEN}`,
 		},
 		committer: {
 			name: 'GitPad User',
@@ -20,7 +21,7 @@ export const PUT = async (file: string, { content, sha }: { content: string, sha
 			date: new Date().toISOString()
 		},
 		message: `${file}.txt updated.`,
-		content: btoa(content),
+		content: encode(content),
 		sha
 	});
 }
