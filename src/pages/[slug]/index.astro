@@ -16,15 +16,19 @@ let rateLimited = false;
 
 function handleError (error: any) {
 	if (error instanceof Error) {
-		console.error("Error!", error.message);
+		console.error("Error!", error);
 	}
 	// .headers['x-ratelimit-remaining']
 	// 	console.error('Too many requests in the last hour! Try again later!');
 }
 
 async function getRateLimit () {
-	const rateRes = await GET_RATE();
-	rateLimited = rateRes.data.rate.remaining < 25;
+	try {
+		const rateRes = await GET_RATE();
+		rateLimited = rateRes.data.rate.remaining < 25;
+	} catch (error) {
+		handleError(error);
+	}
 }
 
 async function getInspectedFile () {
@@ -160,7 +164,7 @@ if (!rateLimited) {
 								<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
 							</svg>
 						</button>
-						<textarea id="inspectedFile" disabled class="resize-none font-mono text-[13px] p-2 h-[60vh] bg-[#161b22] w-full rounded-md">{inspectedFile.content}</textarea>
+						<textarea id="inspectedFile" disabled class="resize-none font-[monospace] text-[13px] p-2 h-[60vh] bg-[#161b22] w-full rounded-md">{inspectedFile.content}</textarea>
 					</div>
 				</form>
 			</div>
@@ -207,18 +211,19 @@ if (!rateLimited) {
 					</label>
 				</div>
 				</div>
-				<div class="flex flex-col">
-					<form id="gitpadForm" action={`/${slug}`} method="POST" class="flex flex-col flex-grow h-0">
-						<div class="flex flex-grow h-0 border-b border-[#30363D]">
+				<div class="flex flex-col relative">
+					<form id="gitpadForm" action={`/${slug}`} method="POST" class="flex flex-col flex-grow">
+						<div class="flex flex-grow h-[1.25rem] border-b border-[#30363D]">
 							<div 
 								id="editorRoot" 
 								data-message={content}
 								class="
 									h-full flex flex-grow
 									[&>.cm-editor]:w-0 [&>.cm-editor]:flex-grow
-									[&_.cm-content]:py-0 [&_.cm-gutters]:bg-[#0d1117] [&_.cm-gutters]:border-transparent
+									[&_.cm-content]:py-0 [&_.cm-gutters]:bg-[#0d1117] [&_.cm-gutters]:border-transparent 
 									[&_.cm-activeLine]:bg-transparent
-									[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold
+									[&_.cm-activeLineGutter]:bg-transparent [&_.cm-activeLineGutter]:font-bold 
+									[&_.cm-activeLineGutter_.cm-gutterElement]:text-[#e6edf3] [&_.cm-gutterElement]:text-[#848d97]
 									[&_.cm-cursor]:border-white
 									[&_.cm-selectionBackground]:!bg-white/20
 									[&_.cm-editor.cm-focused]:outline-none
